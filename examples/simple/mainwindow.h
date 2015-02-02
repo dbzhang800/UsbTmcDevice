@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+class UsbTmcDevice;
+
 namespace Ui {
 class MainWindow;
 }
@@ -17,6 +19,7 @@ public:
 
 private:
     Ui::MainWindow *ui;
+    UsbTmcDevice *tmcDevice;
 };
 
 #endif // MAINWINDOW_H
