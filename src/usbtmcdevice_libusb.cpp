@@ -3,6 +3,30 @@
 
 #include <libusb.h>
 
+/*
+ * All devices with a USBTMC interface must implement string descriptors
+ * with LANGID = 0x0409 (English, United States)
+ */
+static QString getStringDescriptor(libusb_device_handle *handle, quint8 descIndex)
+{
+    uchar data[128];
+    int r = libusb_get_string_descriptor(handle, descIndex, 0x0409, data, 128);
+    if (r < 4) {
+        if (libusb_get_string_descriptor_ascii(handle, descIndex, data, 128) > 0)
+            return QString::fromLatin1(reinterpret_cast<char *>(data));
+        return QString();
+    }
+
+    if (data[0] > r || data[1] != LIBUSB_DT_STRING)
+        return QString();
+
+    int length = (r - 2) / 2;
+    QString descriptor(length, Qt::Uninitialized);
+    for (int i=0; i<length; i++)
+        descriptor[i] = data[i*2+2];
+    return descriptor;
+}
+
 bool UsbTmcDevicePrivate::open_sys(QIODevice::OpenMode /*mode*/)
 {
     if (!libusbContext)
@@ -25,11 +49,10 @@ bool UsbTmcDevicePrivate::open_sys(QIODevice::OpenMode /*mode*/)
 
                 libusb_device_handle *handle;
                 if (!libusb_open(devsList[i], &handle)) {
-                    char data[128];
-                    libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, (uchar *)data, 128);
+                    QString sn = getStringDescriptor(handle, desc.iSerialNumber);
                     libusb_close(handle);
 
-                    if (serialNumber != QString::fromLatin1(data))
+                    if (serialNumber != sn)
                         continue;
                 }
             }
