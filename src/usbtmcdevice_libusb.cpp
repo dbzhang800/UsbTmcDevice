@@ -159,7 +159,6 @@ void UsbTmcDevicePrivate::init_sys()
 {
     libusbContext = 0;
     libusbHandle = 0;
-    interfaceNumber = 0;
     int r = libusb_init(&libusbContext);
     if (r < 0)
         qWarning("libusb init failed.");
@@ -169,4 +168,15 @@ void UsbTmcDevicePrivate::exit_sys()
 {
     if (libusbContext)
         libusb_exit(libusbContext);
+}
+
+qint64 UsbTmcDevicePrivate::readFromBulkInEndpoint_sys(char *data, qint64 maxlen)
+{
+    return -1;
+}
+
+qint64 UsbTmcDevicePrivate::writeToBulkOutEndpoint_sys(const char *data, qint64 len)
+{
+    //libusb_bulk_transfer()
+    return -1;
 }
