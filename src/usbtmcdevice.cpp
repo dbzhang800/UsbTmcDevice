@@ -1,7 +1,8 @@
 #include "usbtmcdevice.h"
 #include "usbtmcdevice_p.h"
 
-UsbTmcDevicePrivate::UsbTmcDevicePrivate(UsbTmcDevice *q) :
+UsbTmcDevicePrivate::UsbTmcDevicePrivate(ushort vid, ushort pid, const QString &serialNumber, UsbTmcDevice *q) :
+    venderId(vid), productId(pid), serialNumber(serialNumber), interfaceProtocol(UsbTmcDevice::USBTMCProtocol),
     q(q)
 {
     init_sys();
@@ -15,18 +16,13 @@ UsbTmcDevicePrivate::~UsbTmcDevicePrivate()
 /*! \class UsbTmcDevice
  */
 UsbTmcDevice::UsbTmcDevice(QObject *parent) :
-    QIODevice(parent), d(new UsbTmcDevicePrivate(this))
+    QIODevice(parent), d(new UsbTmcDevicePrivate(0, 0, QString(), this))
 {
-    d->venderId = 0;
-    d->productId = 0;
 }
 
-UsbTmcDevice::UsbTmcDevice(ushort verderId, ushort productId, const QString &serialNumber, QObject *parent) :
-    QIODevice(parent), d(new UsbTmcDevicePrivate(this))
+UsbTmcDevice::UsbTmcDevice(ushort venderId, ushort productId, const QString &serialNumber, QObject *parent) :
+    QIODevice(parent), d(new UsbTmcDevicePrivate(venderId, productId, serialNumber, this))
 {
-    d->venderId = verderId;
-    d->productId = productId;
-    d->serialNumber = serialNumber;
 }
 
 UsbTmcDevice::~UsbTmcDevice()

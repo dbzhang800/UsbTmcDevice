@@ -11,7 +11,7 @@ class UsbTmcDevicePrivate
 {
     friend class UsbTmcDevice;
 public:
-    UsbTmcDevicePrivate(UsbTmcDevice *q);
+    UsbTmcDevicePrivate(ushort vid, ushort pid, const QString &serialNumber, UsbTmcDevice *q);
     ~UsbTmcDevicePrivate();
 
     bool open_sys(QIODevice::OpenMode mode);
@@ -22,11 +22,13 @@ public:
 #ifdef USBTMCDEVICE_USE_LIBUSB
     libusb_context *libusbContext;
     libusb_device_handle *libusbHandle;
+    int interfaceNumber;
 #endif
 
     ushort venderId;
     ushort productId;
     QString serialNumber;
+    UsbTmcDevice::InterfaceProtocol interfaceProtocol;
 
     UsbTmcDevice *q;
 };

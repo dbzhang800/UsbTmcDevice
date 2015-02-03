@@ -8,6 +8,12 @@ class UsbTmcDevice : public QIODevice
 {
     Q_OBJECT
 public:
+    enum InterfaceProtocol
+    {
+        USBTMCProtocol,
+        USB488Protocol
+    };
+
     explicit UsbTmcDevice(QObject *parent = 0);
     UsbTmcDevice(ushort verderId, ushort productId, const QString &serialNumber=QString(), QObject *parent = 0);
     ~UsbTmcDevice();
