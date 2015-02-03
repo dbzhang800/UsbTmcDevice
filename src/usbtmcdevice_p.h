@@ -22,12 +22,16 @@ public:
 #ifdef USBTMCDEVICE_USE_LIBUSB
     libusb_context *libusbContext;
     libusb_device_handle *libusbHandle;
-    int interfaceNumber;
 #endif
 
     ushort venderId;
     ushort productId;
     QString serialNumber;
+
+    int interfaceNumber;
+    int bulkInEndpointNumber;
+    int bulkOutEndpointNumber;
+    int interruptInEndpointNumber;
     UsbTmcDevice::InterfaceProtocol interfaceProtocol;
 
     UsbTmcDevice *q;

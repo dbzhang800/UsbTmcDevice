@@ -10,7 +10,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     //Take IPD3303SLU as an example.
-    tmcDevice = new UsbTmcDevice(0x8246, 0x1117, "IPD3303SLU000A9B", this);
+    //tmcDevice = new UsbTmcDevice(0x8246, 0x1117, "IPD3303SLU000A9B", this);
+    tmcDevice = new UsbTmcDevice(this);
     tmcDevice->open(QIODevice::ReadWrite);
 }
 

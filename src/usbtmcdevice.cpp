@@ -2,7 +2,9 @@
 #include "usbtmcdevice_p.h"
 
 UsbTmcDevicePrivate::UsbTmcDevicePrivate(ushort vid, ushort pid, const QString &serialNumber, UsbTmcDevice *q) :
-    venderId(vid), productId(pid), serialNumber(serialNumber), interfaceProtocol(UsbTmcDevice::USBTMCProtocol),
+    venderId(vid), productId(pid), serialNumber(serialNumber), interfaceNumber(0),
+    bulkOutEndpointNumber(0), bulkInEndpointNumber(0), interruptInEndpointNumber(-1),
+    interfaceProtocol(UsbTmcDevice::USBTMCProtocol),
     q(q)
 {
     init_sys();
