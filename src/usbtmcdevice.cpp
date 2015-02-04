@@ -2,7 +2,7 @@
 #include "usbtmcdevice_p.h"
 
 UsbTmcDevicePrivate::UsbTmcDevicePrivate(ushort vid, ushort pid, const QString &serialNumber, UsbTmcDevice *q) :
-    venderId(vid), productId(pid), serialNumber(serialNumber), interfaceNumber(0),
+    isOpen(false), venderId(vid), productId(pid), serialNumber(serialNumber), interfaceNumber(0),
     bulkOutEndpointNumber(0), bulkInEndpointNumber(0), interruptInEndpointNumber(-1),
     interfaceProtocol(UsbTmcDevice::USBTMCProtocol),
     q(q)
@@ -69,12 +69,12 @@ void UsbTmcDevicePrivate::fillBulkOutHeader_RequestDevDepMsgIn(QByteArray &data,
 /*! \class UsbTmcDevice
  */
 UsbTmcDevice::UsbTmcDevice(QObject *parent) :
-    QIODevice(parent), d(new UsbTmcDevicePrivate(0, 0, QString(), this))
+    QObject(parent), d(new UsbTmcDevicePrivate(0, 0, QString(), this))
 {
 }
 
 UsbTmcDevice::UsbTmcDevice(ushort venderId, ushort productId, const QString &serialNumber, QObject *parent) :
-    QIODevice(parent), d(new UsbTmcDevicePrivate(venderId, productId, serialNumber, this))
+    QObject(parent), d(new UsbTmcDevicePrivate(venderId, productId, serialNumber, this))
 {
 }
 
@@ -83,11 +83,16 @@ UsbTmcDevice::~UsbTmcDevice()
     delete d;
 }
 
-bool UsbTmcDevice::open(QIODevice::OpenMode mode)
+bool UsbTmcDevice::isOpen() const
 {
-    if (mode != QIODevice::NotOpen && !isOpen()) {
-        if (d->open_sys(mode))
-            QIODevice::open(mode);
+    return d->isOpen;
+}
+
+bool UsbTmcDevice::open()
+{
+    if (!isOpen()) {
+        if (d->open_sys())
+            d->isOpen = true;
     }
    return isOpen();
 }
@@ -96,28 +101,24 @@ void UsbTmcDevice::close()
 {
     if (isOpen())
         d->close_sys();
-    QIODevice::close();
+    d->isOpen = false;
 }
 
-bool UsbTmcDevice::isSequential() const
+qint64 UsbTmcDevice::write(const QByteArray &data)
 {
-    return true;
-}
-
-qint64 UsbTmcDevice::readData(char *data, qint64 maxlen)
-{
-    //Read raw data from bulk in endpoint.
-    return d->readFromBulkInEndpoint_sys(data, maxlen);
-}
-
-qint64 UsbTmcDevice::writeData(const char *data, qint64 len)
-{
-    //Write raw data to bulk out endpoint.
+    int len = data.size();
     int pad = (4 - len % 4) % 4;
     QByteArray buffer(12 + len + pad, Qt::Uninitialized);
     d->fillBulkOutHeader_DevDepMsgOut(buffer, len);
-    memcpy(buffer.data()+12, data, len);
+    memcpy(buffer.data()+12, data.data(), len);
     for (int i=0; i<pad; ++i)
         buffer[int(12 + len + i)] = 0x00;
-    return d->writeToBulkOutEndpoint_sys(data, len);
+
+    //Write raw data to bulk out endpoint.
+    return d->writeToBulkOutEndpoint_sys(data.data(), data.length());
+}
+
+QByteArray UsbTmcDevice::read()
+{
+    return QByteArray();
 }

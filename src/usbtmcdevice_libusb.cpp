@@ -27,7 +27,7 @@ static QString getStringDescriptor(libusb_device_handle *handle, quint8 descInde
     return descriptor;
 }
 
-bool UsbTmcDevicePrivate::open_sys(QIODevice::OpenMode /*mode*/)
+bool UsbTmcDevicePrivate::open_sys()
 {
     if (!libusbContext)
         return false;
@@ -177,6 +177,8 @@ qint64 UsbTmcDevicePrivate::readFromBulkInEndpoint_sys(char *data, qint64 maxlen
 
 qint64 UsbTmcDevicePrivate::writeToBulkOutEndpoint_sys(const char *data, qint64 len)
 {
-    //libusb_bulk_transfer()
-    return -1;
+    int bytesWritten = 0;
+    if (libusb_bulk_transfer(libusbHandle, bulkOutEndpointNumber | LIBUSB_ENDPOINT_OUT, (uchar *)data, len, &bytesWritten, 0) < 0)
+        return -1;
+    return bytesWritten;
 }

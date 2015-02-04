@@ -1,10 +1,10 @@
 #ifndef USBTMCDEVICE_H
 #define USBTMCDEVICE_H
 
-#include <QtCore/qiodevice.h>
+#include <QtCore/qobject.h>
 
 class UsbTmcDevicePrivate;
-class UsbTmcDevice : public QIODevice
+class UsbTmcDevice : public QObject
 {
     Q_OBJECT
 public:
@@ -18,16 +18,16 @@ public:
     UsbTmcDevice(ushort verderId, ushort productId, const QString &serialNumber=QString(), QObject *parent = 0);
     ~UsbTmcDevice();
 
-    bool open(OpenMode mode);
-    bool isSequential() const;
+    bool isOpen() const;
+    bool open();
     void close();
+    qint64 write(const QByteArray &data);
+    QByteArray read();
+
 signals:
+    void readyRead();
 
 public slots:
-
-protected:
-    qint64 readData(char * data, qint64 maxlen);
-    qint64 writeData(const char * data, qint64 len);
 
 private:
     friend class UsbTmcDevicePrivate;

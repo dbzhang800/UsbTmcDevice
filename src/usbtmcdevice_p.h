@@ -45,7 +45,7 @@ public:
     void fillBulkOutHeader_DevDepMsgOut(QByteArray &data, int transferSize, bool eom=true);
     void fillBulkOutHeader_RequestDevDepMsgIn(QByteArray &data, int transferSize, int termChar=-1);
 
-    bool open_sys(QIODevice::OpenMode mode);
+    bool open_sys();
     void close_sys();
     void init_sys();
     void exit_sys();
@@ -56,6 +56,8 @@ public:
     libusb_context *libusbContext;
     libusb_device_handle *libusbHandle;
 #endif
+
+    bool isOpen;
 
     ushort venderId;
     ushort productId;
