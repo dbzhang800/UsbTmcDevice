@@ -21,6 +21,8 @@ public:
     bool isOpen() const;
     bool open();
     void close();
+
+    QByteArray query(const QByteArray &data);
     qint64 write(const QByteArray &data);
     QByteArray read(quint64 maxLen = -1);
 

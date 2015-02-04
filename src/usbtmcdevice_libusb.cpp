@@ -44,13 +44,27 @@ bool UsbTmcDevicePrivate::open_sys()
 
     //Find usb device based on vid and pid.
     libusb_device *deviceFound = 0;
-    if (venderId == 0 && productId == 0 && serialNumber.isEmpty()) {
-        //If no information of the target device is given, try to find a device
-        //Which provides a USBTMC interface.
-        for (int i = 0; i < cnt; i++) {
-            struct libusb_device_descriptor desc;
-            if (libusb_get_device_descriptor(devsList[i], &desc) < 0)
-                break;
+    for (int i = 0; i < cnt; i++) {
+        struct libusb_device_descriptor desc;
+        if (libusb_get_device_descriptor(devsList[i], &desc) < 0) {
+            //break or continue?
+            break;
+        }
+        if ((venderId == 0 || venderId == desc.idVendor)
+                && (productId == 0 || productId == desc.idProduct)) {
+            //Compare serialNumber if it's not empty.
+            if (!serialNumber.isEmpty()) {
+                libusb_device_handle *handle;
+                if (!libusb_open(devsList[i], &handle)) {
+                    QString sn = getStringDescriptor(handle, desc.iSerialNumber);
+                    libusb_close(handle);
+
+                    if (serialNumber != sn)
+                        continue;
+                }
+            }
+
+            //Find usbtmc interface.
             libusb_config_descriptor *config;
             if (libusb_get_config_descriptor(devsList[i], 0, &config) < 0)
                 break;
@@ -60,6 +74,23 @@ bool UsbTmcDevicePrivate::open_sys()
                         && interDesc->bInterfaceSubClass == (uint8_t)0x03) {
                     //OK, interface found.
                     deviceFound = devsList[i];
+                    if (interDesc->iInterface == 1)
+                        interfaceProtocol = UsbTmcDevice::USB488Protocol;
+                    interfaceNumber = j;
+                    for (int k=0; k<static_cast<int>(interDesc->bNumEndpoints); k++) {
+                        const libusb_endpoint_descriptor *epDesc = &interDesc->endpoint[k];
+                        int epNumber = epDesc->bEndpointAddress & 0x0F;
+                        if ((epDesc->bmAttributes & 0x03) == 0x02) {
+                            //Bulk transfer ep
+                            if (epDesc->bEndpointAddress & 0x80)
+                                bulkInEndpointNumber = epNumber;
+                            else
+                                bulkOutEndpointNumber = epNumber;
+                        } else if ((epDesc->bmAttributes & 0x03) == 0x03) {
+                            //Inter transfer ep
+                            interruptInEndpointNumber = epNumber;
+                        }
+                    }
                     break;
                 }
             }
@@ -67,83 +98,27 @@ bool UsbTmcDevicePrivate::open_sys()
             if (deviceFound)
                 break;
         }
-    } else {
-        for (int i = 0; i < cnt; i++) {
-            struct libusb_device_descriptor desc;
-            if (libusb_get_device_descriptor(devsList[i], &desc) < 0)
-                break;
-            if (desc.idVendor == venderId && desc.idProduct == productId) {
-                if (!serialNumber.isEmpty()) {
-                    if (desc.iSerialNumber == 0)
-                        continue;
-
-                    libusb_device_handle *handle;
-                    if (!libusb_open(devsList[i], &handle)) {
-                        QString sn = getStringDescriptor(handle, desc.iSerialNumber);
-                        libusb_close(handle);
-
-                        if (serialNumber != sn)
-                            continue;
-                    }
-                }
-                deviceFound = devsList[i];
-                break;
-            }
-        }
     }
 
-    if (deviceFound) {
-        //Find the interface number and endpoint number.
-        libusb_config_descriptor *config;
-        libusb_get_config_descriptor(deviceFound, 0, &config);
-        for(int i=0; i<static_cast<int>(config->bNumInterfaces); i++) {
-            const libusb_interface *inter = &config->interface[i];
-            const libusb_interface_descriptor * const interDesc = &inter->altsetting[0];
-            if (interDesc->bInterfaceClass == (uint8_t)0xFE
-                    && interDesc->bInterfaceSubClass == (uint8_t)0x03) {
-                //OK, interface found.
-                if (interDesc->iInterface == 1)
-                    interfaceProtocol = UsbTmcDevice::USB488Protocol;
-                interfaceNumber = i;
-                for (int j=0; j<static_cast<int>(interDesc->bNumEndpoints); j++) {
-                    const libusb_endpoint_descriptor *epDesc = &interDesc->endpoint[j];
-                    int epNumber = epDesc->bEndpointAddress & 0x0F;
-                    if ((epDesc->bmAttributes & 0x03) == 0x02) {
-                        //Bulk transfer ep
-                        if (epDesc->bEndpointAddress & 0x80)
-                            bulkInEndpointNumber = epNumber;
-                        else
-                            bulkOutEndpointNumber = epNumber;
-                    } else if ((epDesc->bmAttributes & 0x03) == 0x03) {
-                        //Inter transfer ep
-                        interruptInEndpointNumber = epNumber;
-                    }
-                }
-                break;
-            }
-        }
-        libusb_free_config_descriptor(config);
-
+    if (deviceFound && interfaceNumber != -1) {
         //Open the device if .
-        if (interfaceNumber != -1) {
-            int r = libusb_open(deviceFound, &libusbHandle);
-            if (r < 0) {
-                qWarning("Can not open the device.");
-            } else {
-                //find out if kernel driver is attached
-                if(libusb_kernel_driver_active(libusbHandle, 0) == 1)
-                    libusb_detach_kernel_driver(libusbHandle, 0);
+        int r = libusb_open(deviceFound, &libusbHandle);
+        if (r < 0) {
+            qWarning("Can not open the device.");
+        } else {
+            //find out if kernel driver is attached
+            if(libusb_kernel_driver_active(libusbHandle, 0) == 1)
+                libusb_detach_kernel_driver(libusbHandle, 0);
 
-                //claim the interface
-                if (libusb_claim_interface(libusbHandle, interfaceNumber) < 0) {
-                    qWarning("Can not claim the interface.");
-                    libusb_close(libusbHandle);
-                    libusbHandle = 0;
-                }
-
-//                if (libusbHandle && libusb_reset_device(libusbHandle) < 0)
-//                    qWarning("Cann't reset the device.");
+            //claim the interface
+            if (libusb_claim_interface(libusbHandle, interfaceNumber) < 0) {
+                qWarning("Can not claim the interface.");
+                libusb_close(libusbHandle);
+                libusbHandle = 0;
             }
+
+//            if (libusbHandle && libusb_reset_device(libusbHandle) < 0)
+//                qWarning("Cann't reset the device.");
         }
     }
 
@@ -169,7 +144,7 @@ void UsbTmcDevicePrivate::init_sys()
         qWarning("libusb init failed.");
         return;
     }
-    libusb_set_debug(libusbContext, 3);
+    //libusb_set_debug(libusbContext, 3);
 }
 
 void UsbTmcDevicePrivate::exit_sys()

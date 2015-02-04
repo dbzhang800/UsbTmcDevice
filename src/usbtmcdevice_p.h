@@ -34,16 +34,29 @@ const uchar USB488_REN_CONTROL = 160;
 const uchar USB488_GOTO_LOCAL = 161;
 const uchar USB488_LOCAL_LOCKOUT = 162;
 
+struct DevDepMsgInHeader
+{
+    quint8 msgID;
+    quint8 bTag;
+    quint8 bTagInverse;
+    quint8 reserved;
+    quint32 transferSize;
+    quint8 bmTransferAttributes;
+    quint8 termChar;
+    quint16 reserved2;
+};
+
 class UsbTmcDevicePrivate
 {
     friend class UsbTmcDevice;
 public:
-    UsbTmcDevicePrivate(ushort vid, ushort pid, const QString &serialNumber, UsbTmcDevice *q);
+    UsbTmcDevicePrivate(ushort vId, ushort pId, const QString &serialNumber, UsbTmcDevice *q);
     ~UsbTmcDevicePrivate();
 
     void fillBulkOutHeader(QByteArray &data, uchar msgId);
     QByteArray packDevDepMsgOutData(const QByteArray &data, bool eom=true);
     QByteArray packRequestDevDepMsgInData(int transferSize, int termChar=-1);
+    QByteArray unpackDevDepMsgInData(const QByteArray &data, DevDepMsgInHeader *header = 0);
 
     bool open_sys();
     void close_sys();

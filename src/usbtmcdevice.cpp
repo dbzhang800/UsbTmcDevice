@@ -1,8 +1,10 @@
 #include "usbtmcdevice.h"
 #include "usbtmcdevice_p.h"
 
-UsbTmcDevicePrivate::UsbTmcDevicePrivate(ushort vid, ushort pid, const QString &serialNumber, UsbTmcDevice *q) :
-    isOpen(false), venderId(vid), productId(pid), serialNumber(serialNumber), interfaceNumber(0),
+#include <QtEndian>
+
+UsbTmcDevicePrivate::UsbTmcDevicePrivate(ushort vId, ushort pId, const QString &serialNumber, UsbTmcDevice *q) :
+    isOpen(false), venderId(vId), productId(pId), serialNumber(serialNumber), interfaceNumber(0),
     bulkOutEndpointNumber(0), bulkInEndpointNumber(0), interruptInEndpointNumber(-1),
     interfaceProtocol(UsbTmcDevice::USBTMCProtocol), timeout(1000),
     q(q)
@@ -74,6 +76,20 @@ QByteArray UsbTmcDevicePrivate::packRequestDevDepMsgInData(int transferSize, int
     return data;
 }
 
+QByteArray UsbTmcDevicePrivate::unpackDevDepMsgInData(const QByteArray &data, DevDepMsgInHeader *header)
+{
+    Q_ASSERT(data.length() > 12);
+
+    if (header) {
+        memcpy(header, data.data(), 12);
+#if Q_BYTE_ORDER == Q_BIG_ENDIAN
+        header->transferSize = qFromLittleEndian(header->transferSize);
+#endif
+    }
+
+    return data.mid(12);
+}
+
 /*! \class UsbTmcDevice
  */
 UsbTmcDevice::UsbTmcDevice(QObject *parent) :
@@ -114,6 +130,13 @@ void UsbTmcDevice::close()
     d->isOpen = false;
 }
 
+QByteArray UsbTmcDevice::query(const QByteArray &data)
+{
+    if (write(data) < 0)
+        return QByteArray();
+    return read(-1);
+}
+
 qint64 UsbTmcDevice::write(const QByteArray &data)
 {
     if (!isOpen())
@@ -131,16 +154,24 @@ QByteArray UsbTmcDevice::read(quint64 maxLen)
 
     if (maxLen = -1)
         maxLen = 1024 * 1024;
-    QByteArray requestRawData = d->packRequestDevDepMsgInData(maxLen + 12);
-    if (d->writeToBulkOutEndpoint_sys(requestRawData.data(), requestRawData.length()) == -1)
-        return QByteArray();
 
     QByteArray buffer(maxLen+12, Qt::Uninitialized);
-    int bytesRead = d->readFromBulkInEndpoint_sys(buffer.data(), buffer.length());
-    if (bytesRead > 12) {
-        //Todo, deal with this data.
-        return buffer.mid(12, bytesRead-12);
-    }
-    return QByteArray();
+    QByteArray data;
+    bool eom = false;
+    DevDepMsgInHeader inHeader;
+    int dataBytesNeeded = maxLen;
+    while (!eom && dataBytesNeeded > 0) {
+        QByteArray requestRawData = d->packRequestDevDepMsgInData(dataBytesNeeded);
+        if (d->writeToBulkOutEndpoint_sys(requestRawData.data(), requestRawData.length()) <= 0)
+            return QByteArray();
 
+        int bytesRead = d->readFromBulkInEndpoint_sys(buffer.data(), dataBytesNeeded + 12);
+        if (bytesRead < 12)
+            return QByteArray();
+
+        data += d->unpackDevDepMsgInData(buffer.left(bytesRead), &inHeader);
+        eom = inHeader.bmTransferAttributes & 0x01;
+        dataBytesNeeded = maxLen - data.length();
+    }
+    return data;
 }
