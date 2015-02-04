@@ -141,8 +141,8 @@ bool UsbTmcDevicePrivate::open_sys()
                     libusbHandle = 0;
                 }
 
-                if (libusb_reset_device(libusbHandle) < 0)
-                    qWarning("Cann't reset the device.");
+//                if (libusbHandle && libusb_reset_device(libusbHandle) < 0)
+//                    qWarning("Cann't reset the device.");
             }
         }
     }
