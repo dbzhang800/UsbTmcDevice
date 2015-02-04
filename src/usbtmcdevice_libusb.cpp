@@ -52,9 +52,10 @@ bool UsbTmcDevicePrivate::open_sys()
             if (libusb_get_device_descriptor(devsList[i], &desc) < 0)
                 break;
             libusb_config_descriptor *config;
-            libusb_get_config_descriptor(devsList[i], 0, &config);
-            for(int i=0; i<static_cast<int>(config->bNumInterfaces); i++) {
-                const libusb_interface_descriptor * const interDesc = &config->interface[i].altsetting[0];
+            if (libusb_get_config_descriptor(devsList[i], 0, &config) < 0)
+                break;
+            for(int j=0; j<static_cast<int>(config->bNumInterfaces); j++) {
+                const libusb_interface_descriptor * const interDesc = &config->interface[j].altsetting[0];
                 if (interDesc->bInterfaceClass == (uint8_t)0xFE
                         && interDesc->bInterfaceSubClass == (uint8_t)0x03) {
                     //OK, interface found.
@@ -125,7 +126,8 @@ bool UsbTmcDevicePrivate::open_sys()
 
         //Open the device if .
         if (interfaceNumber != -1) {
-            if (libusb_open(deviceFound, &libusbHandle) < 0) {
+            int r = libusb_open(deviceFound, &libusbHandle);
+            if (r < 0) {
                 qWarning("Can not open the device.");
             } else {
                 //find out if kernel driver is attached
@@ -138,6 +140,9 @@ bool UsbTmcDevicePrivate::open_sys()
                     libusb_close(libusbHandle);
                     libusbHandle = 0;
                 }
+
+                if (libusb_reset_device(libusbHandle) < 0)
+                    qWarning("Cann't reset the device.");
             }
         }
     }
@@ -160,8 +165,11 @@ void UsbTmcDevicePrivate::init_sys()
     libusbContext = 0;
     libusbHandle = 0;
     int r = libusb_init(&libusbContext);
-    if (r < 0)
+    if (r < 0) {
         qWarning("libusb init failed.");
+        return;
+    }
+    libusb_set_debug(libusbContext, 3);
 }
 
 void UsbTmcDevicePrivate::exit_sys()
@@ -172,13 +180,17 @@ void UsbTmcDevicePrivate::exit_sys()
 
 qint64 UsbTmcDevicePrivate::readFromBulkInEndpoint_sys(char *data, qint64 maxlen)
 {
-    return -1;
+    int bytesRead = 0;
+    if (libusb_bulk_transfer(libusbHandle, bulkInEndpointNumber | LIBUSB_ENDPOINT_IN, (uchar *)data, maxlen, &bytesRead, timeout) < 0)
+        return -1;
+    return bytesRead;
 }
 
 qint64 UsbTmcDevicePrivate::writeToBulkOutEndpoint_sys(const char *data, qint64 len)
 {
     int bytesWritten = 0;
-    if (libusb_bulk_transfer(libusbHandle, bulkOutEndpointNumber | LIBUSB_ENDPOINT_OUT, (uchar *)data, len, &bytesWritten, 0) < 0)
+    int r = libusb_bulk_transfer(libusbHandle, bulkOutEndpointNumber | LIBUSB_ENDPOINT_OUT, (uchar *)data, len, &bytesWritten, timeout);
+    if (r < 0)
         return -1;
     return bytesWritten;
 }

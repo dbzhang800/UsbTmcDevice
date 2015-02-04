@@ -42,8 +42,8 @@ public:
     ~UsbTmcDevicePrivate();
 
     void fillBulkOutHeader(QByteArray &data, uchar msgId);
-    void fillBulkOutHeader_DevDepMsgOut(QByteArray &data, int transferSize, bool eom=true);
-    void fillBulkOutHeader_RequestDevDepMsgIn(QByteArray &data, int transferSize, int termChar=-1);
+    QByteArray packDevDepMsgOutData(const QByteArray &data, bool eom=true);
+    QByteArray packRequestDevDepMsgInData(int transferSize, int termChar=-1);
 
     bool open_sys();
     void close_sys();
@@ -70,6 +70,8 @@ public:
     UsbTmcDevice::InterfaceProtocol interfaceProtocol;
 
     uchar last_bTag; //Transfer identifier. [1, 255]
+
+    int timeout;
 
     UsbTmcDevice *q;
 };

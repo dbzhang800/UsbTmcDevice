@@ -22,7 +22,7 @@ public:
     bool open();
     void close();
     qint64 write(const QByteArray &data);
-    QByteArray read();
+    QByteArray read(quint64 maxLen = -1);
 
 signals:
     void readyRead();
