@@ -57,6 +57,7 @@ public:
     QByteArray packDevDepMsgOutData(const QByteArray &data, bool eom=true);
     QByteArray packRequestDevDepMsgInData(int transferSize, int termChar=-1);
     QByteArray unpackDevDepMsgInData(const QByteArray &data, DevDepMsgInHeader *header = 0);
+    void getCapabilities();
 
     bool open_sys();
     void close_sys();
@@ -64,6 +65,7 @@ public:
     void exit_sys();
     qint64 readFromBulkInEndpoint_sys(char *data, qint64 maxlen);
     qint64 writeToBulkOutEndpoint_sys(const char *data, qint64 len);
+    qint64 readWriteDefaultControlEndpoint_sys(quint8 bmRequestType, quint8 bRequest, quint16 wValue, quint16 wIndex, char *data, quint16 wLength);
 
 #ifdef USBTMCDEVICE_USE_LIBUSB
     libusb_context *libusbContext;
@@ -81,6 +83,12 @@ public:
     int bulkOutEndpointNumber;
     int interruptInEndpointNumber;
     UsbTmcDevice::InterfaceProtocol interfaceProtocol;
+
+    //Capabilities
+    bool supportIndicatorPulse;
+    bool isTalkOnly;
+    bool isListenOnly;
+    bool supportTermChar;
 
     uchar last_bTag; //Transfer identifier. [1, 255]
 

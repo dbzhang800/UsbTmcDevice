@@ -6,7 +6,9 @@
 UsbTmcDevicePrivate::UsbTmcDevicePrivate(ushort vId, ushort pId, const QString &serialNumber, UsbTmcDevice *q) :
     isOpen(false), venderId(vId), productId(pId), serialNumber(serialNumber), interfaceNumber(0),
     bulkOutEndpointNumber(0), bulkInEndpointNumber(0), interruptInEndpointNumber(-1),
-    interfaceProtocol(UsbTmcDevice::USBTMCProtocol), timeout(1000),
+    interfaceProtocol(UsbTmcDevice::USBTMCProtocol),
+    supportIndicatorPulse(false), isTalkOnly(false), isListenOnly(false), supportTermChar(false),
+    last_bTag(0), timeout(1000),
     q(q)
 {
     init_sys();
@@ -90,6 +92,21 @@ QByteArray UsbTmcDevicePrivate::unpackDevDepMsgInData(const QByteArray &data, De
     return data.mid(12);
 }
 
+void UsbTmcDevicePrivate::getCapabilities()
+{
+    QByteArray buffer(24, Qt::Uninitialized);
+    if (readWriteDefaultControlEndpoint_sys(0xA1, USBTMC_REQUEST_GET_CAPABILITIES, 0, interfaceNumber, buffer.data(), buffer.length()) < 0) {
+        //Error
+        qWarning("Get Capabilities failed.");
+        return;
+    }
+
+    supportIndicatorPulse = buffer[4] & 0x04;
+    isTalkOnly = buffer[4] & 0x02;
+    isListenOnly = buffer[4] & 0x01;
+    supportTermChar = buffer[5] & 0x01;
+}
+
 /*! \class UsbTmcDevice
  */
 UsbTmcDevice::UsbTmcDevice(QObject *parent) :
@@ -117,8 +134,10 @@ bool UsbTmcDevice::isOpen() const
 bool UsbTmcDevice::open()
 {
     if (!isOpen()) {
-        if (d->open_sys())
+        if (d->open_sys()) {
+            d->getCapabilities();
             d->isOpen = true;
+        }
     }
     return isOpen();
 }

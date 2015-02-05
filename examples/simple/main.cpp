@@ -16,7 +16,8 @@ int main()
     qDebug()<<tmcDevice->query("*IDN?\n").trimmed();
     qDebug()<<tmcDevice->query("*IDN?\n").trimmed();
 
-    tmcDevice->write("CURR 1.2\n");
+    tmcDevice->write("CURR 1.4\n");
+    qDebug()<<tmcDevice->query("MEAS:CURR?\n").trimmed();
     qDebug()<<tmcDevice->query("MEAS:CURR?\n").trimmed();
 
     tmcDevice->close();

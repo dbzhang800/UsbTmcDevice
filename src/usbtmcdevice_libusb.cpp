@@ -169,3 +169,12 @@ qint64 UsbTmcDevicePrivate::writeToBulkOutEndpoint_sys(const char *data, qint64 
         return -1;
     return bytesWritten;
 }
+
+qint64 UsbTmcDevicePrivate::readWriteDefaultControlEndpoint_sys(quint8 bmRequestType, quint8 bRequest, quint16 wValue, quint16 wIndex, char *data, quint16 wLength)
+{
+    int r = libusb_control_transfer(libusbHandle, bmRequestType, bRequest, wValue, wIndex, (uchar *)data, wLength, timeout);
+    if (r < 0)
+        return -1;
+
+    return wLength;
+}
