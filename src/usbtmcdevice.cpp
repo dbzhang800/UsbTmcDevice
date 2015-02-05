@@ -31,6 +31,8 @@ UsbTmcDevicePrivate::UsbTmcDevicePrivate(ushort vId, ushort pId, const QString &
     bulkOutEndpointNumber(0), bulkInEndpointNumber(0), interruptInEndpointNumber(-1),
     interfaceProtocol(UsbTmcDevice::USBTMCProtocol),
     supportIndicatorPulse(false), isTalkOnly(false), isListenOnly(false), supportTermChar(false),
+    supportUsb488IEEE488_2(false), supportRemLocal(false), supportTrigger(false), supportScpi(false),
+    supportSR1(false), supportRL1(false), supportDT1(false),
     last_bTag(0), timeout(1000),
     q(q)
 {
@@ -128,6 +130,15 @@ void UsbTmcDevicePrivate::getCapabilities()
     isTalkOnly = buffer[4] & 0x02;
     isListenOnly = buffer[4] & 0x01;
     supportTermChar = buffer[5] & 0x01;
+    if (interfaceProtocol == UsbTmcDevice::USB488Protocol) {
+        supportUsb488IEEE488_2 = buffer[14] & 0x04;
+        supportRemLocal = buffer[14] & 0x02;
+        supportTrigger = buffer[14] & 0x01;
+        supportScpi = buffer[15] & 0x08;
+        supportSR1 = buffer[15] & 0x04;
+        supportRL1 = buffer[15] & 0x02;
+        supportDT1 = buffer[15] & 0x01;
+    }
 }
 
 /*! \class UsbTmcDevice

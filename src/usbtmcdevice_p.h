@@ -107,11 +107,19 @@ public:
     int interruptInEndpointNumber;
     UsbTmcDevice::InterfaceProtocol interfaceProtocol;
 
-    //Capabilities
+    //USBTMC Capabilities
     bool supportIndicatorPulse;
     bool isTalkOnly;
     bool isListenOnly;
     bool supportTermChar;
+    //USB488 Capabilities
+    bool supportUsb488IEEE488_2;
+    bool supportRemLocal;
+    bool supportTrigger;
+    bool supportScpi;
+    bool supportSR1;
+    bool supportRL1;
+    bool supportDT1;
 
     uchar last_bTag; //Transfer identifier. [1, 255]
 
