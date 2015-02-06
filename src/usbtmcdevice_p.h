@@ -28,6 +28,8 @@
 
 #ifdef USBTMCDEVICE_USE_LIBUSB
 #include <libusb.h>
+#elif defined(USBTMCDEVICE_USE_WINUSB)
+#include <winusb.h>
 #endif
 
 const uchar USBTMC_MSGID_DEV_DEP_MSG_OUT = 1;
@@ -93,6 +95,9 @@ public:
 #ifdef USBTMCDEVICE_USE_LIBUSB
     libusb_context *libusbContext;
     libusb_device_handle *libusbHandle;
+#elif defined(USBTMCDEVICE_USE_WINUSB)
+    HANDLE winusbDeviceHandle;
+    WINUSB_INTERFACE_HANDLE winusbInterfaceHandle;
 #endif
 
     bool isOpen;
