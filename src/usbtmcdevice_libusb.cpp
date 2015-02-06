@@ -97,7 +97,7 @@ bool UsbTmcDevicePrivate::open_sys()
                         && interDesc->bInterfaceSubClass == (uint8_t)0x03) {
                     //OK, interface found.
                     deviceFound = devsList[i];
-                    if (interDesc->iInterface == 1)
+                    if (interDesc->bInterfaceProtocol == 1)
                         interfaceProtocol = UsbTmcDevice::USB488Protocol;
                     interfaceNumber = j;
                     for (int k=0; k<static_cast<int>(interDesc->bNumEndpoints); k++) {
